@@ -46,5 +46,4 @@ public class BufferUtil {
             buffer.putInt(offset + (i * 4), data[i]);
         }
     }
-
 }

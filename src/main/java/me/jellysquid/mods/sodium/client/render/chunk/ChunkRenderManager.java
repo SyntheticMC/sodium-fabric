@@ -35,6 +35,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.chunk.ChunkSection;
 
@@ -253,7 +254,7 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
             return null;
         }
 
-        return column.getRender(y);
+        return column.getRender(this.world.sectionCoordToIndex(y));
     }
 
     private void reset() {
@@ -293,7 +294,7 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
     }
 
     private void loadChunk(int x, int z) {
-        ChunkRenderColumn<T> column = new ChunkRenderColumn<>(x, z);
+        ChunkRenderColumn<T> column = new ChunkRenderColumn<>(x, z, this.world.countVerticalSections());
         ChunkRenderColumn<T> prev;
 
         if ((prev = this.columns.put(ChunkPos.toLong(x, z), column)) != null) {
@@ -323,9 +324,9 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
         int x = column.getX();
         int z = column.getZ();
 
-        for (int y = 0; y < 16; y++) {
+        for (int y = this.world.getBottomSectionCoord(); y < this.world.getTopSectionCoord(); y++) {
             ChunkRenderContainer<T> render = this.createChunkRender(column, x, y, z);
-            column.setRender(y, render);
+            column.setRender(this.world.sectionCoordToIndex(y), render);
 
             this.culler.onSectionLoaded(x, y, z, render.getId());
         }
@@ -335,8 +336,8 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
         int x = column.getX();
         int z = column.getZ();
 
-        for (int y = 0; y < 16; y++) {
-            ChunkRenderContainer<T> render = column.getRender(y);
+        for (int y = this.world.getBottomSectionCoord(); y < this.world.getTopSectionCoord(); y++) {
+            ChunkRenderContainer<T> render = column.getRender(this.world.sectionCoordToIndex(y));
 
             if (render != null) {
                 this.unloadQueue.enqueue(render);
@@ -382,7 +383,7 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
     private ChunkRenderContainer<T> createChunkRender(ChunkRenderColumn<T> column, int x, int y, int z) {
         ChunkRenderContainer<T> render = new ChunkRenderContainer<>(this.backend, this.renderer, x, y, z, column);
 
-        if (ChunkSection.isEmpty(this.world.getChunk(x, z).getSectionArray()[y])) {
+        if (ChunkSection.isEmpty(this.world.getChunk(x, z).getSectionArray()[this.world.sectionCoordToIndex(y)])) {
             render.setData(ChunkRenderData.EMPTY);
         } else {
             render.scheduleRebuild(false);
@@ -393,7 +394,8 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
         return render;
     }
 
-    public void renderLayer(MatrixStack matrixStack, BlockRenderPass pass, double x, double y, double z) {
+    public void renderLayer(MatrixStack matrixStack, BlockRenderPass pass, double x, double y, double z, Matrix4f projectionMatrix) {
+        // TODO projectionMatrix??
         ChunkRenderList<T> chunkRenderList = this.chunkRenderLists[pass.ordinal()];
         ChunkRenderListIterator<T> iterator = chunkRenderList.iterator(pass.isTranslucent());
 
@@ -489,7 +491,7 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
     }
 
     public int getTotalSections() {
-        return this.columns.size() * 16;
+        return this.columns.size() * this.world.countVerticalSections();
     }
 
     public void scheduleRebuild(int x, int y, int z, boolean important) {

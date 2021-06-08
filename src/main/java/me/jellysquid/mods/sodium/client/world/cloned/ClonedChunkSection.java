@@ -150,11 +150,11 @@ public class ClonedChunkSection {
         return new PackedIntegerArray(container.getPaletteSize(), array.getSize(), storage.clone());
     }
 
-    private static ChunkSection getChunkSection(Chunk chunk, ChunkSectionPos pos) {
+    private ChunkSection getChunkSection(Chunk chunk, ChunkSectionPos pos) {
         ChunkSection section = null;
 
-        if (!World.isOutOfBuildLimitVertically(ChunkSectionPos.getBlockCoord(pos.getY()))) {
-            section = chunk.getSectionArray()[pos.getY()];
+        if (!world.isOutOfHeightLimit(ChunkSectionPos.getBlockCoord(pos.getY()))) {
+            section = chunk.getSectionArray()[world.sectionCoordToIndex(pos.getY())];
         }
 
         return section;

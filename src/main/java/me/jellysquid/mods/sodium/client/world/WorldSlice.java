@@ -28,10 +28,10 @@ import java.util.Map;
  * Takes a slice of world state (block states, biome and light data arrays) and copies the data for use in off-thread
  * operations. This allows chunk build tasks to see a consistent snapshot of chunk data at the exact moment the task was
  * created.
- *
+ * <p>
  * World slices are not safe to use from multiple threads at once, but the data they contain is safe from modification
  * by the main client thread.
- *
+ * <p>
  * Object pooling should be used to avoid huge allocations as this class contains many large arrays.
  */
 public class WorldSlice implements BlockRenderView, BiomeAccess.Storage {
@@ -91,7 +91,7 @@ public class WorldSlice implements BlockRenderView, BiomeAccess.Storage {
 
     public static ChunkRenderContext prepare(World world, ChunkSectionPos origin, ClonedChunkSectionCache sectionCache) {
         WorldChunk chunk = world.getChunk(origin.getX(), origin.getZ());
-        ChunkSection section = chunk.getSectionArray()[origin.getY()];
+        ChunkSection section = chunk.getSectionArray()[world.sectionCoordToIndex(origin.getY())];
 
         // If the chunk section is absent or empty, simply terminate now. There will never be anything in this chunk
         // section to render, so we need to signal that a chunk render task shouldn't created. This saves a considerable
@@ -189,14 +189,14 @@ public class WorldSlice implements BlockRenderView, BiomeAccess.Storage {
 
         ChunkSectionPos pos = section.getPosition();
 
-        int minBlockX = Math.max(box.minX, pos.getMinX());
-        int maxBlockX = Math.min(box.maxX, pos.getMaxX());
+        int minBlockX = Math.max(box.getMinX(), pos.getMinX());
+        int maxBlockX = Math.min(box.getMaxX(), pos.getMaxX());
 
-        int minBlockY = Math.max(box.minY, pos.getMinY());
-        int maxBlockY = Math.min(box.maxY, pos.getMaxY());
+        int minBlockY = Math.max(box.getMinY(), pos.getMinY());
+        int maxBlockY = Math.min(box.getMaxY(), pos.getMaxY());
 
-        int minBlockZ = Math.max(box.minZ, pos.getMinZ());
-        int maxBlockZ = Math.min(box.maxZ, pos.getMaxZ());
+        int minBlockZ = Math.max(box.getMinZ(), pos.getMinZ());
+        int maxBlockZ = Math.min(box.getMaxZ(), pos.getMaxZ());
 
         for (int y = minBlockY; y <= maxBlockY; y++) {
             for (int z = minBlockZ; z <= maxBlockZ; z++) {
@@ -347,5 +347,15 @@ public class WorldSlice implements BlockRenderView, BiomeAccess.Storage {
 
     public static int getLocalChunkIndex(int x, int z) {
         return z << TABLE_BITS | x;
+    }
+
+    @Override
+    public int getHeight() {
+        return world.getHeight();
+    }
+
+    @Override
+    public int getBottomY() {
+        return world.getBottomY();
     }
 }
